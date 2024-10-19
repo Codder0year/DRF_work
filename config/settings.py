@@ -2,6 +2,7 @@ import os
 from datetime import timedelta
 from pathlib import Path
 from dotenv import load_dotenv
+from celery.schedules import crontab
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -37,6 +38,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'drf_yasg',
     'django_extensions',
+    'habits',
 ]
 
 REST_FRAMEWORK = {
@@ -45,6 +47,9 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',],
+
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+        'PAGE_SIZE': 5,
 }
 
 # Настройки срока действия токенов
@@ -62,6 +67,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -135,6 +141,10 @@ STATIC_URL = 'static/'
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+]
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'users.User'
 
@@ -143,26 +153,35 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 STRIPE_API_KEY = os.getenv('STRIP_API_KEY')
 
-# URL-адрес брокера сообщений
-CELERY_BROKER_URL = 'redis://localhost:6379'
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN') # Токен бота
 
-# URL-адрес брокера результатов, также Redis
-CELERY_RESULT_BACKEND = 'redis://localhost:6379'
+# URL-адрес брокера сообщений
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+
+# URL-адрес брокера результатов, также Redis (уже добавлено)
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 
 # Часовой пояс для работы Celery
-CELERY_TIMEZONE = "Australia/Tasmania"
+CELERY_TIMEZONE = "Europe/Moscow"  # Скорректировано для московского времени
 
 # Флаг отслеживания выполнения задач
 CELERY_TASK_TRACK_STARTED = True
 
-# Максимальное время на выполнение задачи
+# Максимальное время на выполнение задачи (30 минут)
 CELERY_TASK_TIME_LIMIT = 30 * 60
 
-from celery.schedules import crontab
+# Настройки сериализации задач
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
 
+# Периодические задачи
 CELERY_BEAT_SCHEDULE = {
     'deactivate-inactive-users-every-month': {
         'task': 'users.tasks.deactivate_inactive_users',
         'schedule': crontab(day_of_week='*', hour=0, minute=0),
+    },
+    'send-habit-reminders': {
+        'task': 'habits.tasks.send_habit_reminders',  # Ваша задача для отправки уведомлений
+        'schedule': crontab(minute=0, hour=8),  # Установите расписание, например, каждый день в 8 утра
     },
 }

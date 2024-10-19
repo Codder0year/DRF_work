@@ -36,4 +36,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/users/', include('users.urls')),
     path('api/materials/', include('materials.urls')),
+    path('api/habits/', include('habits.urls')),  # Подключаем маршруты для привычек
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
